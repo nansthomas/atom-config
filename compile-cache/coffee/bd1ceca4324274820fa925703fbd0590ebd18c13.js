@@ -1,0 +1,88 @@
+(function() {
+  var ArgumentParser, fs, path;
+
+  path = require('path');
+
+  fs = require('fs');
+
+  module.exports = ArgumentParser = (function() {
+    function ArgumentParser() {}
+
+    ArgumentParser.prototype.parseValue = function(value) {
+      if (value === void 0) {
+        return true;
+      }
+      value = value.trim();
+      if (value === true || value === 'true' || value === 'yes') {
+        return true;
+      }
+      if (value === false || value === 'false' || value === 'no') {
+        return false;
+      }
+      if (isFinite(value)) {
+        if (value.indexOf('.') > -1) {
+          return parseFloat(value);
+        } else {
+          return parseInt(value);
+        }
+      }
+      if (value[0] === '[') {
+        value = this.parseArray(value);
+      }
+      if (value[0] === '{') {
+        value = this.parseObject(value);
+      }
+      return value;
+    };
+
+    ArgumentParser.prototype.parseArray = function(arrayAsString) {
+      var arr, match, regex, value;
+      arrayAsString = arrayAsString.substr(1, arrayAsString.length - 2);
+      regex = /(?:\s*(?:(?:'(.*?)')|(?:"(.*?)")|([^,;]+))?)*/g;
+      arr = [];
+      while ((match = regex.exec(arrayAsString)) !== null) {
+        if (match.index === regex.lastIndex) {
+          regex.lastIndex++;
+        }
+        value = match[1] ? match[1] : match[2] ? match[2] : match[3] ? match[3] : void 0;
+        if (value !== void 0) {
+          value = this.parseValue(value);
+          arr.push(value);
+        }
+      }
+      return arr;
+    };
+
+    ArgumentParser.prototype.parseObject = function(objectAsString) {
+      var key, match, obj, regex, value;
+      objectAsString = objectAsString.substr(1, objectAsString.length - 2);
+      regex = /(?:(\!?[\w-\.]+)(?:\s*:\s*(?:(?:'(.*?)')|(?:"(.*?)")|([^,;]+)))?)*/g;
+      obj = {};
+      while ((match = regex.exec(objectAsString)) !== null) {
+        if (match.index === regex.lastIndex) {
+          regex.lastIndex++;
+        }
+        if (match[1] !== void 0) {
+          key = match[1].trim();
+          value = match[2] ? match[2] : match[3] ? match[3] : match[4] ? match[4] : void 0;
+          if (key[0] === '!') {
+            key = key.substr(1);
+            if (value === void 0) {
+              value = 'false';
+            }
+          }
+          obj[key] = this.parseValue(value);
+        }
+      }
+      return obj;
+    };
+
+    return ArgumentParser;
+
+  })();
+
+}).call(this);
+
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAiZmlsZSI6ICIiLAogICJzb3VyY2VSb290IjogIiIsCiAgInNvdXJjZXMiOiBbCiAgICAiL1VzZXJzL25hbnN0aG9tYXMvLmF0b20vcGFja2FnZXMvc2Fzcy1hdXRvY29tcGlsZS9saWIvaGVscGVyL2FyZ3VtZW50LXBhcnNlci5jb2ZmZWUiCiAgXSwKICAibmFtZXMiOiBbXSwKICAibWFwcGluZ3MiOiAiQUFBQTtBQUFBLE1BQUEsd0JBQUE7O0FBQUEsRUFBQSxJQUFBLEdBQU8sT0FBQSxDQUFRLE1BQVIsQ0FBUCxDQUFBOztBQUFBLEVBQ0EsRUFBQSxHQUFLLE9BQUEsQ0FBUSxJQUFSLENBREwsQ0FBQTs7QUFBQSxFQUlBLE1BQU0sQ0FBQyxPQUFQLEdBQ007Z0NBRUY7O0FBQUEsNkJBQUEsVUFBQSxHQUFZLFNBQUMsS0FBRCxHQUFBO0FBRVIsTUFBQSxJQUFHLEtBQUEsS0FBUyxNQUFaO0FBQ0ksZUFBTyxJQUFQLENBREo7T0FBQTtBQUFBLE1BR0EsS0FBQSxHQUFRLEtBQUssQ0FBQyxJQUFOLENBQUEsQ0FIUixDQUFBO0FBTUEsTUFBQSxJQUFHLEtBQUEsS0FBVSxJQUFWLElBQUEsS0FBQSxLQUFnQixNQUFoQixJQUFBLEtBQUEsS0FBd0IsS0FBM0I7QUFDSSxlQUFPLElBQVAsQ0FESjtPQU5BO0FBUUEsTUFBQSxJQUFHLEtBQUEsS0FBVSxLQUFWLElBQUEsS0FBQSxLQUFpQixPQUFqQixJQUFBLEtBQUEsS0FBMEIsSUFBN0I7QUFDSSxlQUFPLEtBQVAsQ0FESjtPQVJBO0FBWUEsTUFBQSxJQUFHLFFBQUEsQ0FBUyxLQUFULENBQUg7QUFDSSxRQUFBLElBQUcsS0FBSyxDQUFDLE9BQU4sQ0FBYyxHQUFkLENBQUEsR0FBcUIsQ0FBQSxDQUF4QjtBQUNJLGlCQUFPLFVBQUEsQ0FBVyxLQUFYLENBQVAsQ0FESjtTQUFBLE1BQUE7QUFHSSxpQkFBTyxRQUFBLENBQVMsS0FBVCxDQUFQLENBSEo7U0FESjtPQVpBO0FBbUJBLE1BQUEsSUFBRyxLQUFNLENBQUEsQ0FB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
+
+//# sourceURL=/Users/nansthomas/.atom/packages/sass-autocompile/lib/helper/argument-parser.coffee

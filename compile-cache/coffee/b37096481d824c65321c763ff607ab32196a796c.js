@@ -1,0 +1,192 @@
+(function() {
+  var Beautifier, Beautifiers, Languages, beautifiers, isWindows, _;
+
+  Beautifiers = require("../src/beautifiers");
+
+  beautifiers = new Beautifiers();
+
+  Beautifier = require("../src/beautifiers/beautifier");
+
+  Languages = require('../src/languages/');
+
+  _ = require('lodash');
+
+  isWindows = process.platform === 'win32' || process.env.OSTYPE === 'cygwin' || process.env.OSTYPE === 'msys';
+
+  describe("Atom-Beautify", function() {
+    beforeEach(function() {
+      return waitsForPromise(function() {
+        var activationPromise, pack;
+        activationPromise = atom.packages.activatePackage('atom-beautify');
+        pack = atom.packages.getLoadedPackage("atom-beautify");
+        pack.activateNow();
+        return activationPromise;
+      });
+    });
+    return describe("Beautifiers", function() {
+      return describe("Beautifier::run", function() {
+        var beautifier;
+        beautifier = null;
+        beforeEach(function() {
+          return beautifier = new Beautifier();
+        });
+        it("should error when beautifier's program not found", function() {
+          expect(beautifier).not.toBe(null);
+          expect(beautifier instanceof Beautifier).toBe(true);
+          return waitsForPromise({
+            shouldReject: true
+          }, function() {
+            var cb, p;
+            p = beautifier.run("program", []);
+            expect(p).not.toBe(null);
+            expect(p instanceof beautifier.Promise).toBe(true);
+            cb = function(v) {
+              expect(v).not.toBe(null);
+              expect(v instanceof Error).toBe(true);
+              expect(v.code).toBe("CommandNotFound");
+              expect(v.description).toBe(void 0, 'Error should not have a description.');
+              return v;
+            };
+            p.then(cb, cb);
+            return p;
+          });
+        });
+        it("should error with help description when beautifier's program not found", function() {
+          expect(beautifier).not.toBe(null);
+          expect(beautifier instanceof Beautifier).toBe(true);
+          return waitsForPromise({
+            shouldReject: true
+          }, function() {
+            var cb, help, p;
+            help = {
+              link: "http://test.com",
+              program: "test-program",
+              pathOption: "Lang - Test Program Path"
+            };
+            p = beautifier.run("program", [], {
+              help: help
+            });
+            expect(p).not.toBe(null);
+            expect(p instanceof beautifier.Promise).toBe(true);
+            cb = function(v) {
+              expect(v).not.toBe(null);
+              expect(v instanceof Error).toBe(true);
+              expect(v.code).toBe("CommandNotFound");
+              expect(v.description).not.toBe(null);
+              expect(v.description.indexOf(help.link)).not.toBe(-1);
+              expect(v.description.indexOf(help.program)).not.toBe(-1);
+              expect(v.description.indexOf(help.pathOption)).not.toBe(-1, "Error should have a description.");
+              return v;
+            };
+            p.then(cb, cb);
+            return p;
+          });
+        });
+        it("should error with Windows-specific help description when beautifier's program not found", function() {
+          expect(beautifier).not.toBe(null);
+          expect(beautifier instanceof Beautifier).toBe(true);
+          return waitsForPromise({
+            shouldReject: true
+          }, function() {
+            var cb, help, p, terminal, whichCmd;
+            help = {
+              link: "http://test.com",
+              program: "test-program",
+              pathOption: "Lang - Test Program Path"
+            };
+            beautifier.isWindows = true;
+            terminal = 'CMD prompt';
+            whichCmd = "where.exe";
+            p = beautifier.run("program", [], {
+              help: help
+            });
+            expect(p).not.toBe(null);
+            expect(p instanceof beautifier.Promise).toBe(true);
+            cb = function(v) {
+              expect(v).not.toBe(null);
+              expect(v instanceof Error).toBe(true);
+              expect(v.code).toBe("CommandNotFound");
+              expect(v.description).not.toBe(null);
+              expect(v.description.indexOf(help.link)).not.toBe(-1);
+              expect(v.description.indexOf(help.program)).not.toBe(-1);
+              expect(v.description.indexOf(help.pathOption)).not.toBe(-1, "Error should have a description.");
+              expect(v.description.indexOf(terminal)).not.toBe(-1, "Error should have a description including '" + terminal + "' in message.");
+              expect(v.description.indexOf(whichCmd)).not.toBe(-1, "Error should have a description including '" + whichCmd + "' in message.");
+              return v;
+            };
+            p.then(cb, cb);
+            return p;
+          });
+        });
+        if (!isWindows) {
+          return it("should error with Mac/Linux-specific help description when beautifier's program not found", function() {
+            expect(beautifier).not.toBe(null);
+            expect(beautifier instanceof Beautifier).toBe(true);
+            return waitsForPromise({
+              shouldReject: true
+            }, function() {
+              var cb, help, p, terminal, whichCmd;
+              help = {
+                link: "http://test.com",
+                program: "test-program",
+                pathOption: "Lang - Test Program Path"
+              };
+              beautifier.isWindows = false;
+              terminal = "Terminal";
+              whichCmd = "which";
+              p = beautifier.run("program", [], {
+                help: help
+              });
+              expect(p).not.toBe(null);
+              expect(p instanceof beautifier.Promise).toBe(true);
+              cb = function(v) {
+                expect(v).not.toBe(null);
+                expect(v instanceof Error).toBe(true);
+                expect(v.code).toBe("CommandNotFound");
+                expect(v.description).not.toBe(null);
+                expect(v.description.indexOf(help.link)).not.toBe(-1);
+                expect(v.description.indexOf(help.program)).not.toBe(-1);
+                expect(v.description.indexOf(terminal)).not.toBe(-1, "Error should have a description including '" + terminal + "' in message.");
+                expect(v.description.indexOf(whichCmd)).not.toBe(-1, "Error should have a description including '" + whichCmd + "' in message.");
+                return v;
+              };
+              p.then(cb, cb);
+              return p;
+            });
+          });
+        }
+      });
+    });
+  });
+
+  describe("Languages", function() {
+    var languages;
+    languages = null;
+    beforeEach(function() {
+      return languages = new Languages();
+    });
+    return describe("Languages::namespace", function() {
+      return it("should verify that multiple languages do not share the same namespace", function() {
+        var namespaceGroups, namespaceOverlap, namespacePairs;
+        namespaceGroups = _.groupBy(languages.languages, "namespace");
+        namespacePairs = _.toPairs(namespaceGroups);
+        namespaceOverlap = _.filter(namespacePairs, function(_arg) {
+          var group, namespace;
+          namespace = _arg[0], group = _arg[1];
+          return group.length > 1;
+        });
+        console.log('namespaces', namespaceGroups, namespacePairs, namespaceOverlap);
+        return expect(namespaceOverlap.length).toBe(0, "Language namespaces are overlapping.\nNamespaces are unique: only one language for each namespace.\n" + _.map(namespaceOverlap, function(_arg) {
+          var group, namespace;
+          namespace = _arg[0], group = _arg[1];
+          return "- '" + namespace + "': Check languages " + (_.map(group, 'name').join(', ')) + " for using namespace '" + namespace + "'.";
+        }).join('\n'));
+      });
+    });
+  });
+
+}).call(this);
+
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAiZmlsZSI6ICIiLAogICJzb3VyY2VSb290IjogIiIsCiAgInNvdXJjZXMiOiBbCiAgICAiL1VzZXJzL25hbnN0aG9tYXMvLmF0b20vcGFja2FnZXMvYXRvbS1iZWF1dGlmeS9zcGVjL2F0b20tYmVhdXRpZnktc3BlYy5jb2ZmZWUiCiAgXSwKICAibmFtZXMiOiBbXSwKICAibWFwcGluZ3MiOiAiQUFBQTtBQUFBLE1BQUEsNkRBQUE7O0FBQUEsRUFBQSxXQUFBLEdBQWMsT0FBQSxDQUFRLG9CQUFSLENBQWQsQ0FBQTs7QUFBQSxFQUNBLFdBQUEsR0FBa0IsSUFBQSxXQUFBLENBQUEsQ0FEbEIsQ0FBQTs7QUFBQSxFQUVBLFVBQUEsR0FBYSxPQUFBLENBQVEsK0JBQVIsQ0FGYixDQUFBOztBQUFBLEVBR0EsU0FBQSxHQUFZLE9BQUEsQ0FBUSxtQkFBUixDQUhaLENBQUE7O0FBQUEsRUFJQSxDQUFBLEdBQUksT0FBQSxDQUFRLFFBQVIsQ0FKSixDQUFBOztBQUFBLEVBWUEsU0FBQSxHQUFZLE9BQU8sQ0FBQyxRQUFSLEtBQW9CLE9BQXBCLElBQ1YsT0FBTyxDQUFDLEdBQUcsQ0FBQyxNQUFaLEtBQXNCLFFBRFosSUFFVixPQUFPLENBQUMsR0FBRyxDQUFDLE1BQVosS0FBc0IsTUFkeEIsQ0FBQTs7QUFBQSxFQWdCQSxRQUFBLENBQVMsZUFBVCxFQUEwQixTQUFBLEdBQUE7QUFFeEIsSUFBQSxVQUFBLENBQVcsU0FBQSxHQUFBO2FBR1QsZUFBQSxDQUFnQixTQUFBLEdBQUE7QUFDZCxZQUFBLHVCQUFBO0FBQUEsUUFBQSxpQkFBQSxHQUFvQixJQUFJLENBQUMsUUFBUSxDQUFDLGVBQWQsQ0FBOEIsZUFBOUIsQ0FBcEIsQ0FBQTtBQUFBLFFBRUEsSUFBQSxHQUFPLElBQUksQ0FBQyxRQUFRLENBQUMsZ0JBQWQsQ0FBK0IsZUFBL0IsQ0FGUCxDQUFBO0FBQUEsUUFHQSxJQUFJLENBQUMsV0FBTCxDQUFBLENBSEEsQ0FBQTtBQU9BLGVBQU8saUJBQVAsQ0FSYztNQUFBLENB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
+
+//# sourceURL=/Users/nansthomas/.atom/packages/atom-beautify/spec/atom-beautify-spec.coffee
